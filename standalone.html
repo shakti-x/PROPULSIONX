@@ -1,0 +1,605 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><title>PropulsionX</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: sticky bar, split hero with a live "site brief" card, filterable project index, process strip, plans ledger, brief builder with live preview. */
+:root{
+  --bg:#EDF0F6; --surface:#F9FAFD; --ink:#0E1A2B; --muted:#4A5669; --line:#C6CEDD;
+  --accent:#1F47E8; --accent-ink:#FFFFFF; --mark:#FFE14D; --mark-ink:#0E1A2B;
+  --grid:rgba(14,26,43,.055); --ok:#0A7347;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Hanken Grotesk","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A111D; --surface:#111B2C; --ink:#E8EDF7; --muted:#9AA7BD; --line:#26344D;
+    --accent:#7C9CFF; --accent-ink:#0A111D; --grid:rgba(232,237,247,.05); --ok:#4ADE9A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A111D; --surface:#111B2C; --ink:#E8EDF7; --muted:#9AA7BD; --line:#26344D;
+  --accent:#7C9CFF; --accent-ink:#0A111D; --grid:rgba(232,237,247,.05); --ok:#4ADE9A;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background-color:var(--bg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:32px 32px;
+  color:var(--ink); font:400 16px/1.6 var(--f-body); -webkit-font-smoothing:antialiased;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+.wrap{width:100%;max-width:1160px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
+p{margin:0}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:12px;min-height:60px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font:700 1.25rem var(--f-display);letter-spacing:-.02em}
+.brand-mark{width:14px;height:14px;background:var(--accent);box-shadow:5px 5px 0 var(--mark);margin-right:4px}
+.nav{display:flex;align-items:center;gap:2px;margin-left:auto}
+.nav a{padding:8px 12px;text-decoration:none;font-weight:500;font-size:.95rem;border-radius:4px}
+.nav a:hover{background:var(--surface)}
+.nav .nav-cta{background:var(--ink);color:var(--bg);font-weight:600}
+.nav .nav-cta:hover{background:var(--accent);color:var(--accent-ink)}
+.icon-btn{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:4px;cursor:pointer}
+.icon-btn:hover{border-color:var(--ink)}
+
+/* buttons and chips */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);font:600 1rem var(--f-body);text-decoration:none;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--ink)}
+.btn.ghost:hover{background:var(--surface);filter:none}
+.btn.small{padding:8px 14px;font-size:.92rem}
+.chip{display:inline-flex;align-items:center;padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font:500 .85rem var(--f-mono);text-decoration:none;cursor:pointer}
+a.chip:hover,button.chip:hover{border-color:var(--ink)}
+button.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+span.chip.pending{cursor:default;color:var(--muted);border-style:dashed}
+
+/* hero */
+.hero{padding-block:clamp(40px,7vw,88px) clamp(48px,6vw,80px)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:clamp(32px,5vw,72px);align-items:center}
+h1{font-weight:700;font-size:clamp(2.5rem,6.2vw,4.7rem);line-height:1.02;letter-spacing:-.03em;margin-bottom:22px}
+.hl{background:var(--mark);color:var(--mark-ink);padding:0 .14em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.lead{font-size:clamp(1.05rem,1.6vw,1.2rem);color:var(--muted);max-width:54ch;margin-bottom:28px}
+.cta-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:28px}
+.social{display:flex;flex-wrap:wrap;gap:10px}
+.brief-card{background:var(--surface);border:1px solid var(--ink);border-radius:6px;box-shadow:8px 8px 0 var(--accent);min-width:0}
+.brief-head{display:flex;justify-content:space-between;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);font:500 .72rem var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.brief-body{margin:0;padding:8px 16px 16px}
+.brief-body div{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.brief-body div:last-child{border-bottom:0}
+.brief-body dt{font:500 .78rem var(--f-mono);color:var(--muted);padding-top:2px}
+.brief-body dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+.caret{display:inline-block;width:2px;height:1.05em;background:var(--accent);vertical-align:-.15em;margin-left:2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* sections */
+.sec{padding-block:clamp(48px,7vw,88px);border-top:1px solid var(--line)}
+.eyebrow{font:500 .78rem var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+h2{font-weight:700;font-size:clamp(1.8rem,4vw,2.8rem);line-height:1.08;letter-spacing:-.025em}
+.sec-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:32px}
+.sec-sub{color:var(--muted);max-width:60ch;margin-top:12px}
+.filters{display:flex;flex-wrap:wrap;gap:8px}
+
+/* project cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));gap:16px}
+.card{display:flex;flex-direction:column;gap:12px;padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:6px;min-width:0;transition:transform .2s,border-color .2s}
+.card:hover{transform:translateY(-3px);border-color:var(--accent)}
+.card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font:500 .75rem var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.badge{background:var(--mark);color:var(--mark-ink);padding:2px 7px;border-radius:2px;font-size:.68rem}
+.card h3{font-size:1.35rem;line-height:1.15;letter-spacing:-.015em}
+.card p{color:var(--muted);font-size:.97rem}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font:500 .74rem var(--f-mono);padding:2px 9px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+.links{display:flex;flex-wrap:wrap;gap:16px;margin-top:auto;padding-top:6px;font-weight:600}
+.links a{color:var(--accent);text-underline-offset:3px}
+.links .soon{font-weight:400;font-size:.88rem;color:var(--muted)}
+
+/* ledgers: steps and plans */
+.ledger{list-style:none;margin:0;padding:0;display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.steps{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.plans{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.steps li,.plan{background:var(--surface);padding:24px;min-width:0}
+.step-n{font:500 .8rem var(--f-mono);color:var(--accent);letter-spacing:.1em}
+.steps h3,.plan h3{font-size:1.25rem;letter-spacing:-.01em;margin:8px 0}
+.steps p{color:var(--muted);font-size:.97rem}
+.plan .tier{font:500 .75rem var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.plan .price{font:700 1.9rem var(--f-display);letter-spacing:-.02em;margin:6px 0 14px}
+.plan ul{list-style:none;margin:0;padding:0;display:grid;gap:10px;font-size:.96rem}
+.plan li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:6px}
+.plan li::before{content:"+";font-family:var(--f-mono);font-weight:500;color:var(--accent)}
+.plan.feat{box-shadow:inset 0 4px 0 var(--mark)}
+.fine{margin-top:16px;color:var(--muted);font-size:.9rem;max-width:70ch}
+
+/* start a project */
+.start-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(24px,4vw,48px);align-items:start}
+form{display:grid;gap:20px;min-width:0}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+label,.label{font-weight:600;font-size:.93rem}
+.hint{font-size:.84rem;color:var(--muted);font-weight:400}
+input,textarea,select{width:100%;font:400 1rem var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:11px 12px}
+textarea{resize:vertical;min-height:84px}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:0}
+::placeholder{color:var(--muted);opacity:.8}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.preview{position:sticky;top:calc(80px + env(safe-area-inset-top,0px));display:grid;gap:14px;min-width:0}
+.meter-row{display:flex;justify-content:space-between;font:500 .78rem var(--f-mono);color:var(--muted)}
+.meter{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.meter i{display:block;height:100%;width:0;background:var(--ok);transition:width .3s}
+.brief{margin:0;padding:16px;background:var(--surface);border:1px solid var(--ink);border-radius:6px;font:400 .82rem/1.65 var(--f-mono);white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.mailbox{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 14px;border:1px dashed var(--ink);border-radius:6px;background:var(--surface)}
+.mailbox code{font:500 .95rem var(--f-mono);user-select:all;overflow-wrap:anywhere;min-width:0}
+.note{font-size:.88rem;color:var(--muted)}
+.ai{display:grid;gap:10px;padding:16px;border:1px solid var(--accent);border-radius:6px;background:var(--surface)}
+.ai-text{white-space:pre-wrap;font-size:.92rem;overflow-wrap:anywhere;max-height:260px;overflow:auto}
+.ai-status{font:500 .78rem var(--f-mono);color:var(--muted)}
+
+/* footer */
+.foot{border-top:1px solid var(--ink);padding-block:clamp(40px,6vw,72px) 40px}
+.foot h2{font-size:clamp(2rem,5vw,3.4rem);margin-bottom:20px}
+.foot-links{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:32px}
+.legal{font:400 .78rem var(--f-mono);color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:4px;font-weight:500;font-size:.92rem;max-width:calc(100vw - 32px);transition:opacity .2s,transform .2s;z-index:40}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+@media (max-width:900px){
+  .hero-grid,.start-grid{grid-template-columns:minmax(0,1fr)}
+  .preview{position:static}
+}
+@media (max-width:640px){
+  .nav a:not(.nav-cta){display:none}
+  .row2{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .caret{animation:none}
+  .card,.meter i,.toast{transition:none}
+}
+</style>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span>PropulsionX</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#projects">Projects</a>
+      <a href="#process">Process</a>
+      <a href="#plans">Plans</a>
+      <a class="nav-cta" href="#start">Get a website</a>
+    </nav>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch colour theme">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <h1>Every project I've built, <span class="hl">in one place</span>.</h1>
+        <p class="lead">I'm Shakti, and I run PropulsionX. I build websites and software projects. Browse what we've made, or tell me about your business and I'll build your website for free or at a very small cost.</p>
+        <div class="cta-row">
+          <a class="btn" href="#projects">See my projects</a>
+          <a class="btn ghost" href="#start">Get your own website</a>
+        </div>
+        <div class="social" aria-label="Find me online">
+          <a class="chip" data-profile="github" href="#">GitHub</a>
+          <a class="chip" data-profile="linkedin" href="#">LinkedIn</a>
+          <a class="chip" id="heroMail" href="#">shakti7515@gmail.com</a>
+        </div>
+      </div>
+      <aside class="brief-card" aria-label="Example of a website brief">
+        <div class="brief-head"><span>Site brief</span><span>Draft</span></div>
+        <dl class="brief-body">
+          <div><dt>Business</dt><dd><span id="typed">a neighbourhood bakery</span><span class="caret" aria-hidden="true"></span></dd></div>
+          <div><dt>Pages</dt><dd>Home, About, Contact</dd></div>
+          <div><dt>Hosting</dt><dd>Free tier</dd></div>
+          <div><dt>Cost to start</dt><dd>Free or minimal</dd></div>
+          <div><dt>Next step</dt><dd>I read it and reply by email</dd></div>
+        </dl>
+      </aside>
+    </div>
+  </section>
+
+  <section class="sec" id="projects">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow" id="projCount">Projects</div>
+          <h2>What I've built</h2>
+          <p class="sec-sub">Each card links to the live project and its code when they are available.</p>
+        </div>
+        <div class="filters" id="filters" role="group" aria-label="Filter projects by type"></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+  <section class="sec" id="process">
+    <div class="wrap">
+      <div class="sec-head"><div>
+        <div class="eyebrow">How it works</div>
+        <h2>From rough idea to live site</h2>
+      </div></div>
+      <ol class="ledger steps">
+        <li><span class="step-n">STEP 1</span><h3>Send your idea</h3><p>Fill in the form below. Rough notes are fine.</p></li>
+        <li><span class="step-n">STEP 2</span><h3>Sharpen it with AI</h3><p>Use the AI help in the form, or paste your notes into any AI chat to turn them into a clear brief.</p></li>
+        <li><span class="step-n">STEP 3</span><h3>I reply with a plan</h3><p>I read your brief, ask what is missing, and agree pages, features and cost before I start.</p></li>
+        <li><span class="step-n">STEP 4</span><h3>Build and launch</h3><p>You review a working site, ask for changes, and we put it live on free hosting.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="sec" id="plans">
+    <div class="wrap">
+      <div class="sec-head"><div>
+        <div class="eyebrow">Plans</div>
+        <h2>Free or minimal cost</h2>
+        <p class="sec-sub">Pick the closest fit. We confirm the exact scope and fee together before any work starts.</p>
+      </div></div>
+      <div class="ledger plans">
+        <div class="plan">
+          <div class="tier">Starter</div><h3>One-page site</h3><div class="price">Free</div>
+          <ul><li>One page, built for phones first</li><li>Contact button and WhatsApp link</li><li>Free hosting on GitHub Pages or Netlify</li><li>You own the code</li></ul>
+        </div>
+        <div class="plan feat">
+          <div class="tier">Business</div><h3>Small business site</h3><div class="price">Minimal cost</div>
+          <ul><li>Up to 5 pages</li><li>Contact form and Google Maps link</li><li>Basic search-engine setup</li><li>Custom domain connected</li></ul>
+        </div>
+        <div class="plan">
+          <div class="tier">Custom</div><h3>Something bigger</h3><div class="price">Quoted</div>
+          <ul><li>Bookings, payments or customer login</li><li>Dashboards and admin pages</li><li>AI features such as chat or search</li><li>Ongoing changes after launch</li></ul>
+        </div>
+      </div>
+      <p class="fine">A custom domain name is bought from a domain registrar and is the one cost that usually sits outside my fee. Free hosting covers most small sites.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="start">
+    <div class="wrap">
+      <div class="sec-head"><div>
+        <div class="eyebrow">Start a project</div>
+        <h2>Tell me about your business</h2>
+        <p class="sec-sub">Fill in what you know. The brief on the right updates as you type. Nothing is sent from this page: copy the brief and email it to me.</p>
+      </div></div>
+
+      <div class="start-grid">
+        <form id="briefForm" autocomplete="off" novalidate>
+          <div class="row2">
+            <div class="field"><label for="f-name">Your name</label><input id="f-name" data-f="name" type="text" placeholder="Asha Verma"></div>
+            <div class="field"><label for="f-email">Your email</label><input id="f-email" data-f="email" type="email" inputmode="email" placeholder="asha@example.com"></div>
+          </div>
+          <div class="field"><label for="f-business">Business or project name</label><input id="f-business" data-f="business" type="text" placeholder="Verma Home Bakery"></div>
+          <div class="field"><label for="f-about">What do you sell or offer?</label><textarea id="f-about" data-f="about" placeholder="Cakes and snacks made to order. Customers call or message to book."></textarea></div>
+          <div class="field"><label for="f-customers">Who are your customers? <span class="hint">(optional)</span></label><textarea id="f-customers" data-f="customers" placeholder="Families and offices in my area who order for birthdays and events."></textarea></div>
+          <div class="field" role="group" aria-labelledby="l-pages"><span class="label" id="l-pages">Pages you want</span><div class="chips" data-set="pages"></div></div>
+          <div class="field" role="group" aria-labelledby="l-feat"><span class="label" id="l-feat">Features you want</span><div class="chips" data-set="features"></div></div>
+          <div class="field"><label for="f-style">Style, colours, or sites you like <span class="hint">(optional)</span></label><input id="f-style" data-f="style" type="text" placeholder="Warm and friendly. I like the look of example.com"></div>
+          <div class="row2">
+            <div class="field"><label for="f-budget">Budget</label>
+              <select id="f-budget" data-f="budget"><option value="">Choose one</option><option>Free only</option><option>Minimal cost</option><option>Flexible, not sure yet</option></select></div>
+            <div class="field"><label for="f-timeline">When do you need it?</label>
+              <select id="f-timeline" data-f="timeline"><option value="">Choose one</option><option>As soon as possible</option><option>In 2 to 4 weeks</option><option>No rush</option></select></div>
+          </div>
+          <div class="field"><label for="f-notes">Extra details <span class="hint">(paste your AI-improved version here if you used one)</span></label><textarea id="f-notes" data-f="notes" placeholder="Anything else I should know."></textarea></div>
+        </form>
+
+        <div class="preview">
+          <div>
+            <div class="meter-row"><span>BRIEF PREVIEW</span><span id="meterText">0 of 6 key details</span></div>
+            <div class="meter" aria-hidden="true"><i id="meterFill"></i></div>
+          </div>
+          <pre class="brief" id="briefOut" aria-live="polite"></pre>
+          <div class="actions">
+            <button class="btn" id="copyBrief" type="button">Copy brief</button>
+            <button class="btn ghost" id="aiBtn" type="button" hidden>Help me write this with AI</button>
+            <button class="btn ghost" id="copyPrompt" type="button">Copy AI prompt</button>
+          </div>
+          <div class="ai" id="aiPanel" hidden>
+            <div class="ai-status" id="aiStatus" role="status"></div>
+            <div class="ai-text" id="aiText"></div>
+            <div class="actions">
+              <button class="btn small" id="aiAdd" type="button" disabled>Add to my brief</button>
+              <button class="btn small ghost" id="aiClose" type="button">Dismiss</button>
+            </div>
+          </div>
+          <div class="mailbox">
+            <span class="note">Email the brief to</span>
+            <code id="emailText">shakti7515@gmail.com</code>
+            <button class="btn small ghost" id="copyEmail" type="button">Copy address</button>
+            <a class="btn small" id="mailLink" href="#">Open in email app</a>
+          </div>
+          <p class="note">The email app button works only in some views. If nothing opens, copy the brief and the address and send it yourself. No AI tool? Copy the AI prompt and paste it into any AI chat, then paste its answer into Extra details.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <h2>Have an idea? Send it over.</h2>
+    <div class="foot-links">
+      <a class="chip" id="footMail" href="#">shakti7515@gmail.com</a>
+      <a class="chip" data-profile="github" href="#">GitHub</a>
+      <a class="chip" data-profile="linkedin" href="#">LinkedIn</a>
+    </div>
+    <div class="legal" id="legal">PropulsionX</div>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---- Edit these: your profile links and your projects ---- */
+  var PROFILE = { name: "Shakti", brand: "PropulsionX" /* temporary company name */, email: "shakti7515@gmail.com", github: "", linkedin: "" };
+  var PROJECTS = [
+    { title:"Weather Dashboard", cat:"Web", example:true, desc:"A clean dashboard that shows the forecast for any city with charts for the week ahead.", tags:["JavaScript","API","CSS"], live:"", code:"" },
+    { title:"Chat With Your Notes", cat:"AI", example:true, desc:"Ask questions about your own notes and get answers with the source passage highlighted.", tags:["Python","LLM","Search"], live:"", code:"" },
+    { title:"Expense Tracker", cat:"App", example:true, desc:"Log daily spending, set monthly limits and see where the money goes.", tags:["React","Charts"], live:"", code:"" },
+    { title:"Student Result Portal", cat:"Web", example:true, desc:"Students look up results by roll number. Teachers upload marks from a spreadsheet.", tags:["HTML","Node","Database"], live:"", code:"" }
+  ];
+  var PAGES = ["Home","About","Services","Products","Gallery","Pricing","Blog","FAQ","Contact"];
+  var FEATURES = ["Contact form","WhatsApp button","Online booking","Online payments","Customer login","Google Maps","Photo gallery","More than one language"];
+  var IDEAS = ["a neighbourhood bakery","a tuition class","a small clinic","an online shop","a photography portfolio","a local gym"];
+  /* ---------------------------------------------------------- */
+
+  var $ = function(s, r){ return (r || document).querySelector(s); };
+  var $$ = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var root = document.documentElement;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  /* theme */
+  try { var saved = localStorage.getItem("shakti-theme"); if (saved === "dark" || saved === "light") root.setAttribute("data-theme", saved); } catch (e) {}
+  $("#themeBtn").addEventListener("click", function(){
+    var cur = root.getAttribute("data-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    var next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("shakti-theme", next); } catch (e) {}
+  });
+
+  /* toast */
+  var toastTimer;
+  function toast(msg){
+    var t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2600);
+  }
+
+  /* profile links */
+  $$("[data-profile]").forEach(function(a){
+    var url = PROFILE[a.getAttribute("data-profile")];
+    if (url) {
+      a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+    } else {
+      var s = el("span", a.className + " pending", a.textContent + " · link coming soon");
+      a.replaceWith(s);
+    }
+  });
+  $$("#emailText").forEach(function(c){ c.textContent = PROFILE.email; });
+  ["heroMail","footMail"].forEach(function(id){
+    var a = $("#" + id);
+    a.textContent = PROFILE.email;
+    a.href = "mailto:" + PROFILE.email;
+  });
+  $("#legal").textContent = "© " + new Date().getFullYear() + " " + PROFILE.brand;
+
+  /* typed business line in the hero card */
+  var typed = $("#typed");
+  if (!reduce) {
+    var wi = 0, ci = IDEAS[0].length, deleting = true;
+    var tick = function(){
+      var w = IDEAS[wi];
+      typed.textContent = w.slice(0, ci);
+      if (deleting) {
+        if (ci > 0) { ci--; setTimeout(tick, 32); }
+        else { deleting = false; wi = (wi + 1) % IDEAS.length; setTimeout(tick, 300); }
+      } else {
+        if (ci < w.length) { ci++; setTimeout(tick, 68); }
+        else { deleting = true; setTimeout(tick, 1600); }
+      }
+    };
+    setTimeout(tick, 2200);
+  }
+
+  /* projects */
+  var grid = $("#grid"), filtersEl = $("#filters"), activeCat = "All";
+  function card(p){
+    var a = el("article", "card");
+    var meta = el("div", "meta");
+    meta.appendChild(el("span", null, p.cat));
+    if (p.example) meta.appendChild(el("span", "badge", "Example"));
+    a.appendChild(meta);
+    a.appendChild(el("h3", null, p.title));
+    a.appendChild(el("p", null, p.desc));
+    var tags = el("div", "tags");
+    p.tags.forEach(function(t){ tags.appendChild(el("span", "tag", t)); });
+    a.appendChild(tags);
+    var links = el("div", "links");
+    if (p.live) { var l = el("a", null, "Live site ↗"); l.href = p.live; l.target = "_blank"; l.rel = "noopener noreferrer"; links.appendChild(l); }
+    if (p.code) { var c = el("a", null, "Code ↗"); c.href = p.code; c.target = "_blank"; c.rel = "noopener noreferrer"; links.appendChild(c); }
+    if (!p.live && !p.code) links.appendChild(el("span", "soon", "Links coming soon"));
+    a.appendChild(links);
+    return a;
+  }
+  function renderProjects(){
+    var list = PROJECTS.filter(function(p){ return activeCat === "All" || p.cat === activeCat; });
+    grid.replaceChildren.apply(grid, list.map(card));
+    $("#projCount").textContent = "Projects · " + list.length + (activeCat === "All" ? "" : " in " + activeCat);
+    $$("button", filtersEl).forEach(function(b){ b.setAttribute("aria-pressed", String(b.getAttribute("data-cat") === activeCat)); });
+  }
+  var cats = ["All"];
+  PROJECTS.forEach(function(p){ if (cats.indexOf(p.cat) < 0) cats.push(p.cat); });
+  cats.forEach(function(c){
+    var b = el("button", "chip", c);
+    b.type = "button"; b.setAttribute("data-cat", c); b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", function(){ activeCat = c; renderProjects(); });
+    filtersEl.appendChild(b);
+  });
+  renderProjects();
+
+  /* brief form */
+  var form = { name:"", email:"", business:"", about:"", customers:"", style:"", budget:"", timeline:"", notes:"",
+               pages: ["Home","About","Contact"], features: [] };
+  var optionSets = { pages: PAGES, features: FEATURES };
+
+  function buildChips(key){
+    var box = $('[data-set="' + key + '"]');
+    optionSets[key].forEach(function(opt){
+      var b = el("button", "chip", opt);
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(form[key].indexOf(opt) >= 0));
+      b.addEventListener("click", function(){
+        var i = form[key].indexOf(opt);
+        if (i >= 0) form[key].splice(i, 1); else form[key].push(opt);
+        b.setAttribute("aria-pressed", String(i < 0));
+        update();
+      });
+      box.appendChild(b);
+    });
+  }
+  buildChips("pages");
+  buildChips("features");
+
+  $$("[data-f]").forEach(function(inp){
+    var key = inp.getAttribute("data-f");
+    var h = function(){ form[key] = inp.value; update(); };
+    inp.addEventListener("input", h);
+    inp.addEventListener("change", h);
+  });
+
+  function val(v){ v = (v || "").trim(); return v || "—"; }
+  function briefText(){
+    return [
+      "WEBSITE BRIEF",
+      "Name: " + val(form.name),
+      "Email: " + val(form.email),
+      "Business: " + val(form.business),
+      "What it offers: " + val(form.about),
+      "Customers: " + val(form.customers),
+      "Pages: " + (form.pages.length ? form.pages.join(", ") : "—"),
+      "Features: " + (form.features.length ? form.features.join(", ") : "—"),
+      "Style and references: " + val(form.style),
+      "Budget: " + val(form.budget),
+      "Timeline: " + val(form.timeline),
+      "Extra details: " + val(form.notes)
+    ].join("\n");
+  }
+  function aiPrompt(){
+    return "I want a simple, low-cost website for my business. Turn my rough notes into a clear brief I can send to a web developer. First list up to 5 questions I may have missed. Then write the brief under these headings: Business, Audience, Pages, Features, Style, Budget, Timeline. Keep it plain and short. Do not invent facts I did not give.\n\nMy notes:\n" + briefText();
+  }
+  function update(){
+    $("#briefOut").textContent = briefText();
+    var emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+    var done = [form.name.trim(), emailOk, form.business.trim(), form.about.trim(), form.pages.length, form.budget].filter(Boolean).length;
+    $("#meterText").textContent = done + " of 6 key details";
+    $("#meterFill").style.width = (done / 6 * 100) + "%";
+    var subject = "Website project: " + (form.business.trim() || form.name.trim() || "new idea");
+    $("#mailLink").href = "mailto:" + PROFILE.email + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(briefText());
+  }
+  update();
+
+  /* copy helper */
+  function copy(text, label){
+    var done = function(){ toast(label + " copied"); };
+    var fallback = function(){
+      var t = document.createElement("textarea");
+      t.value = text; t.setAttribute("readonly", "");
+      t.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+      document.body.appendChild(t); t.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      t.remove();
+      if (ok) done(); else toast("Copy did not work here. Select the text and copy it by hand.");
+    };
+    try {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } catch (e) { fallback(); }
+  }
+  $("#copyBrief").addEventListener("click", function(){ copy(briefText(), "Brief"); });
+  $("#copyPrompt").addEventListener("click", function(){ copy(aiPrompt(), "AI prompt"); });
+  $("#copyEmail").addEventListener("click", function(){ copy(PROFILE.email, "Email address"); });
+
+  /* AI help (lights up only when this view allows it) */
+  var sample = null, ctrl = null;
+  var aiBtn = $("#aiBtn"), aiPanel = $("#aiPanel"), aiText = $("#aiText"), aiStatus = $("#aiStatus"), aiAdd = $("#aiAdd");
+  try {
+    if (window.claude && window.claude.use) {
+      window.claude.use("sample").then(function(s){
+        if (s) { sample = s; aiBtn.hidden = false; }
+      }, function(){});
+    }
+  } catch (e) {}
+
+  aiBtn.addEventListener("click", function(){
+    if (!sample) return;
+    if (!form.business.trim() && !form.about.trim()) {
+      toast("Add your business name or a line about it first.");
+      $("#f-business").focus();
+      return;
+    }
+    if (ctrl) ctrl.abort();
+    ctrl = new AbortController();
+    aiPanel.hidden = false;
+    aiText.textContent = "";
+    aiAdd.disabled = true;
+    aiBtn.disabled = true;
+    aiStatus.textContent = "Reading your notes…";
+    var prompt = aiPrompt() + "\n\nFormat: plain text only, no markdown symbols. Under 220 words.";
+    sample(prompt, { onText: function(e){ aiText.textContent = e.text; }, signal: ctrl.signal, modelTier: "quick", cache: false })
+      .then(function(res){
+        aiText.textContent = res.text;
+        aiStatus.textContent = "Suggestions. Review them, then add them to your brief.";
+        aiAdd.disabled = false;
+      })
+      .catch(function(err){
+        if (err && err.name === "AbortError") return;
+        var code = err && err.code;
+        aiStatus.textContent = code === "not_granted" ? "AI help was declined or is not available here. Use Copy AI prompt instead."
+          : code === "rate_limited" ? "Too many requests. Wait a minute and try again."
+          : "AI help did not respond. Use Copy AI prompt instead.";
+      })
+      .then(function(){ aiBtn.disabled = false; });
+  });
+  aiAdd.addEventListener("click", function(){
+    var t = aiText.textContent.trim();
+    if (!t) return;
+    var notes = $("#f-notes");
+    notes.value = (notes.value.trim() ? notes.value.trim() + "\n\n" : "") + "AI suggestions:\n" + t;
+    form.notes = notes.value;
+    update();
+    toast("Added to Extra details");
+  });
+  $("#aiClose").addEventListener("click", function(){
+    if (ctrl) ctrl.abort();
+    aiPanel.hidden = true;
+  });
+})();
+</script>
+</body></html>
